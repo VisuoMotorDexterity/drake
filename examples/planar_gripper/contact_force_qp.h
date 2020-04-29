@@ -135,13 +135,21 @@ class InstantaneousContactForceQPController
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(InstantaneousContactForceQPController)
 
   /**
-   * @param gripper_brick The gripper_brick system.
+   * @param brick_type The type of brick (planar, pinned) to be manipulated.
+   * @param plant The MBP containing the planar-gripper/brick system.
    * @param Kp_t The proportional gain for the brick y/z translational
    * position.
    * @param Kd_t The derivative gain for the brick y/z translational position.
+   * @param Ki_t The integral gain for the brick y/z translational position
+   * error.
    * @param Kp_r The proportional gain for the brick rotational position
    * (angle).
    * @param Kd_r The derivative gain for the brick rotational velocity.
+   * @param Ki_r The integral gain for the brick rotational position (angular)
+   * error.
+   * @param Ki_r_sat The angular error integral controller's saturation value.
+   * @param Ki_t_sat The translational error integral controller's saturation
+   * value.
    * @param weight_a_error The weighting for the brick y/z acceleration in the
    * cost. This error is made up of a PD term and a FF term.
    * @param weight_thetaddot_error The weighting for the brick thetaddot in the
@@ -159,10 +167,12 @@ class InstantaneousContactForceQPController
   InstantaneousContactForceQPController(
       BrickType brick_type, const multibody::MultibodyPlant<double>* plant,
       const Eigen::Ref<const Eigen::Matrix2d>& Kp_t,
-      const Eigen::Ref<const Eigen::Matrix2d>& Kd_t, double Kp_r,
-      double Kd_r, double weight_a_error, double weight_thetaddot_error,
-      double weight_f_Cb_B, double mu, double translational_damping,
-      double rotational_damping, double I_B, double mass_B);
+      const Eigen::Ref<const Eigen::Matrix2d>& Kd_t,
+      const Eigen::Ref<const Eigen::Matrix2d>& Ki_t, double Kp_r, double Kd_r,
+      double Ki_r, double Ki_r_sat,  double Ki_t_sat, double weight_a_error,
+      double weight_thetaddot_error, double weight_f_Cb_B, double mu,
+      double translational_damping, double rotational_damping, double I_B,
+      double mass_B);
 
   const systems::InputPort<double>& get_input_port_estimated_plant_state()
       const {
@@ -233,6 +243,11 @@ class InstantaneousContactForceQPController
     return this->get_output_port(output_index_brick_control_);
   }
 
+ protected:
+  void DoCalcTimeDerivatives(
+      const systems::Context<double>& context,
+      systems::ContinuousState<double>* derivatives) const override;
+
  private:
   void CalcFingersControl(
       const systems::Context<double>& context,
@@ -250,8 +265,12 @@ class InstantaneousContactForceQPController
   double mu_;
   Eigen::Matrix2d Kp_t_;  // Translational proportional QP gain.
   Eigen::Matrix2d Kd_t_;  // Translational derivative QP gain.
+  Eigen::Matrix2d Ki_t_;  // Translational integral QP gain.
   double Kp_r_;  // Rotational proportional QP gain.
   double Kd_r_;  // Rotational derivative QP gain.
+  double Ki_r_;  // Rotational integral QP gain.
+  double Ki_r_sat;  // Rotational integral control saturation value.
+  double Ki_t_sat;  // Translational integral control saturation value.
   double weight_a_error_;
   double weight_thetaddot_error_;
   double weight_f_Cb_B_;

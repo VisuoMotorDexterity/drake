@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "drake/common/trajectories/piecewise_polynomial.h"
 #include "drake/examples/planar_gripper/contact_force_qp.h"
 #include "drake/examples/planar_gripper/planar_gripper.h"
 #include "drake/examples/planar_gripper/planar_gripper_common.h"
@@ -162,6 +163,20 @@ class ForceController : public systems::LeafSystem<double> {
   ForceControlOptions options_;
 };
 
+/// Defines the type of control task. A "regulation" task controls the brick to
+/// a set-point goal. A "tracking" task controls the brick to follow a desired
+/// state trajectory.
+enum class ControlTask {
+  kRegulation,
+  kTracking,
+};
+
+struct BrickGoal {
+  double y_goal{0};  // goal y position (m).
+  double z_goal{0};  // goal z position (m).
+  double theta_goal{0};  // goal rotation angle (rad).
+};
+
 struct QPControlOptions {
   double T_{0};  // time horizon
 
@@ -172,14 +187,14 @@ struct QPControlOptions {
   //  of kGripperLcmPeriod.
   double plan_dt{0.01};
 
-  double yf_{0};  // final y position (m).
-  double zf_{0};  // final z position (m).
-  double thetaf_{0};  // final rotation angle (rad).
-
   double QP_Kp_r_{0};  // rotational Kp gain.
   double QP_Kd_r_{0};  // rotational Kd gain.
+  double QP_Ki_r_{0};  // rotational Ki gain.
   Eigen::Matrix2d QP_Kp_t_{Eigen::Matrix2d::Zero()};  // translational Kp gain.
   Eigen::Matrix2d QP_Kd_t_{Eigen::Matrix2d::Zero()};  // translational Kd gain.
+  Eigen::Matrix2d QP_Ki_t_{Eigen::Matrix2d::Zero()};  // translational Ki gain.
+  double QP_Ki_r_sat_{0};  // rotation integral saturation limit.
+  double QP_Ki_t_sat_{0};  // translation integral saturation limit.
   double QP_weight_thetaddot_error_{0};  // thetaddot error weight.
   double QP_weight_acceleration_error_{0};  // tran. acceleration error weight.
   double QP_weight_f_Cb_B_{0};  // contact force magnitude penalty weight.
@@ -201,6 +216,10 @@ struct QPControlOptions {
   std::unordered_map<Finger, BrickFaceInfo> brick_spatial_force_assignments_;
 
   BrickType brick_type_{BrickType::PinBrick};
+  ControlTask control_task_{ControlTask::kRegulation};
+  BrickGoal brick_goal_;  // for regulation task.
+  trajectories::PiecewisePolynomial<double>
+      desired_brick_traj_;  // for tracking task.
 };
 
 /// Connects a QP controller to a planar_gripper/brick simulation.

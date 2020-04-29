@@ -166,6 +166,7 @@ void FingerFaceAssigner::CalcFingerFaceAssignments(
       BrickFaceInfo face_info(*brick_faces.first.begin(),
                               Eigen::Vector2d(result.tail<2>()),
                               true /* in contact */);
+      face_info.p_WCb = p_WCb.tail<2>();
       finger_face_assignments->emplace(finger_id_pair.first, face_info);
     } else {
       BrickFaceInfo face_info(*brick_faces.first.begin(),
