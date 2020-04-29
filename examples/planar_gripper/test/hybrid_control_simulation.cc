@@ -161,9 +161,9 @@ void GetQPPlannerOptions(const PlanarGripper& planar_gripper,
 
   qpoptions->T_ = FLAGS_T;
   qpoptions->plan_dt = FLAGS_QP_plan_dt;
-  qpoptions->yf_ = FLAGS_yf;
-  qpoptions->zf_ = FLAGS_zf;
-  qpoptions->thetaf_ = FLAGS_thetaf;
+  qpoptions->brick_goal_.y_goal = FLAGS_yf;
+  qpoptions->brick_goal_.z_goal = FLAGS_zf;
+  qpoptions->brick_goal_.theta_goal = FLAGS_thetaf;
   qpoptions->QP_Kp_r_ =
       (brick_type == BrickType::PinBrick ? FLAGS_QP_Kp_r_pinned
                                          : FLAGS_QP_Kp_r_planar);
@@ -250,23 +250,19 @@ int DoMain() {
 
   // Parse the keyframes
   const std::string keyframe_path =
-      "drake/examples/planar_gripper/pinned_brick_postures_03.txt";
+      "drake/examples/planar_gripper/keyframes/pinned_brick_single_mode.txt";
   MatrixX<double> finger_keyframes;
   std::map<std::string, int> finger_joint_name_to_row_index_map;
+  VectorX<double> times;
+  MatrixX<double> modes;
   std::tie(finger_keyframes, finger_joint_name_to_row_index_map) =
-      ParseKeyframes(keyframe_path);
+      ParseKeyframesAndModes(keyframe_path, &times, &modes);
 
   // Create the individual finger matrices. For this demo, we assume we have
   // three fingers, two joints each.
   DRAKE_DEMAND(kNumFingers == 3);
   DRAKE_DEMAND(kNumJointsPerFinger == 2);
   int num_keys = finger_keyframes.cols();
-
-  // Creates the time vector for the plan interpolator.
-  Eigen::VectorXd times = Eigen::VectorXd::Zero(finger_keyframes.cols());
-  for (int i = 1; i < finger_keyframes.cols(); ++i) {
-    times(i) = i * 0.1 /* plan dt */;
-  }
 
   // Create and connect the trajectory sources.
   for (int i = 0; i < kNumFingers; i++) {
