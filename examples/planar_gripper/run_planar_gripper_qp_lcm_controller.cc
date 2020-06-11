@@ -99,7 +99,8 @@ int DoMain() {
   systems::lcm::LcmInterfaceSystem* lcm =
       builder.AddSystem<systems::lcm::LcmInterfaceSystem>();
 
-  PlanarGripper planar_gripper(0.0 /* time step */, ControlType::kTorque);
+  PlanarGripper planar_gripper(1e-3 /* arbitrary time step */,
+                               ControlType::kTorque);
   planar_gripper.SetupPinBrick("vertical");
   planar_gripper.zero_gravity();
   planar_gripper.Finalize();
