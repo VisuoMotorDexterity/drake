@@ -189,8 +189,7 @@ void GetQPPlannerOptions(const PlanarGripper& planar_gripper,
   qpoptions->brick_type_ = brick_type;
 }
 
-void GetForceControllerOptions(const PlanarGripper& planar_gripper,
-                               const Finger finger,
+void GetForceControllerOptions(const Finger finger,
                                ForceControlOptions* foptions) {
   foptions->kpf_t_ = FLAGS_kpf_t;
   foptions->kpf_n_ = FLAGS_kpf_n;
@@ -242,7 +241,7 @@ int DoMain() {
   std::unordered_map<Finger, ForceController&> finger_force_control_map;
   for (auto& finger : FingersToControl()) {
     ForceControlOptions foptions;
-    GetForceControllerOptions(*planar_gripper, finger, &foptions);
+    GetForceControllerOptions(finger, &foptions);
     DRAKE_DEMAND(finger == foptions.finger_to_control_);
     ForceController* force_controller =
         SetupForceController(*planar_gripper, &drake_lcm, foptions, &builder);
