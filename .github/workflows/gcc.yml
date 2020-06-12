@@ -1,4 +1,4 @@
-name: clang C/C++ CI
+name: GCC C/C++ CI
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 jobs:
   build:
 
-    runs-on: [self-hosted, clang]
+    runs-on: [self-hosted, GCC]
     
     steps:
     - uses: actions/checkout@v2
