@@ -211,8 +211,14 @@ void ForceController::CalcTauOutput(
   // contact results object and it lies inside the intersection of the
   // fingertip sphere and brick geometries (i.e., the actual contact point).
   if (is_contact) {
+    Eigen::Vector3d p_BCb(0, brick_face_info.p_BCb(0),
+                          brick_face_info.p_BCb(1));
+    Eigen::Vector3d p_WCb;
+    plant_.CalcPointsPositions(*plant_context_,
+                               plant_.GetFrameByName("brick_link"), p_BCb,
+                               plant_.world_frame(), &p_WCb);
     p_WCr =
-        Eigen::Vector3d(0, brick_face_info.p_WCb(0), brick_face_info.p_WCb(1));
+        Eigen::Vector3d(0, p_WCb(1), p_WCb(2));  // take the y,z components.
     plant_.CalcPointsPositions(*plant_context_, plant_.world_frame(), p_WCr,
                                tip_link_frame, &p_LtCr);
   } else {  // otherwise we have no contact, and we take the fingertip sphere
@@ -739,12 +745,14 @@ void AddGripperQPControllerToDiagram(
     std::map<std::string, const InputPort<double>&>* in_ports,
     std::map<std::string, const OutputPort<double>&>* out_ports) {
   // QP controller
-  Eigen::Matrix2d Kp_t = qpoptions.QP_Kp_t_;
-  Eigen::Matrix2d Kd_t = qpoptions.QP_Kd_t_;
-  Eigen::Matrix2d Ki_t = qpoptions.QP_Ki_t_;
-  double Kp_r = qpoptions.QP_Kp_r_;
-  double Kd_r = qpoptions.QP_Kd_r_;
-  double Ki_r = qpoptions.QP_Ki_r_;
+  Vector2d Kp_t = qpoptions.QP_Kp_t_;
+  Vector2d Kd_t = qpoptions.QP_Kd_t_;
+  Vector2d Ki_t = qpoptions.QP_Ki_t_;
+  Vector2d Ki_t_sat = qpoptions.QP_Ki_t_sat_;
+  double kp_r = qpoptions.QP_kp_r_;
+  double kd_r = qpoptions.QP_kd_r_;
+  double ki_r = qpoptions.QP_ki_r_;
+  double ki_r_sat = qpoptions.QP_ki_r_sat_;
   double weight_thetaddot_error = qpoptions.QP_weight_thetaddot_error_;
   double weight_acceleration_error = qpoptions.QP_weight_acceleration_error_;
   double weight_f_Cb_B = qpoptions.QP_weight_f_Cb_B_;
@@ -756,10 +764,10 @@ void AddGripperQPControllerToDiagram(
 
   InstantaneousContactForceQPController* qp_controller =
       builder->AddSystem<InstantaneousContactForceQPController>(
-          qpoptions.brick_type_, &plant, Kp_t, Kd_t, Ki_t, Kp_r, Kd_r, Ki_r,
-          qpoptions.QP_Ki_r_sat_, qpoptions.QP_Ki_t_sat_,
-          weight_acceleration_error, weight_thetaddot_error, weight_f_Cb_B, mu,
-          translational_damping, rotational_damping, I_B, mass_B);
+          qpoptions.brick_type_, &plant, Kp_t, Kd_t, Ki_t, Ki_t_sat, kp_r, kd_r,
+          ki_r, ki_r_sat, weight_acceleration_error, weight_thetaddot_error,
+          weight_f_Cb_B, mu, translational_damping, rotational_damping, I_B,
+          mass_B);
 
   // Insert a zero order hold on the output of the controller, so that its
   // output (and hence it's computation of the QP) is only pulled at the

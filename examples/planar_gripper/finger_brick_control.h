@@ -187,14 +187,22 @@ struct QPControlOptions {
   //  of kGripperLcmPeriod.
   double plan_dt{0.01};
 
-  double QP_Kp_r_{0};  // rotational Kp gain.
-  double QP_Kd_r_{0};  // rotational Kd gain.
-  double QP_Ki_r_{0};  // rotational Ki gain.
-  Eigen::Matrix2d QP_Kp_t_{Eigen::Matrix2d::Zero()};  // translational Kp gain.
-  Eigen::Matrix2d QP_Kd_t_{Eigen::Matrix2d::Zero()};  // translational Kd gain.
-  Eigen::Matrix2d QP_Ki_t_{Eigen::Matrix2d::Zero()};  // translational Ki gain.
-  double QP_Ki_r_sat_{0};  // rotation integral saturation limit.
-  double QP_Ki_t_sat_{0};  // translation integral saturation limit.
+  double QP_kp_r_{0};  // rotational proportional gain.
+  double QP_kd_r_{0};  // rotational derivative gain.
+  double QP_ki_r_{0};  // rotational integral gain.
+
+  // translational proportional gains (kp_y, kp_z).
+  Vector2d QP_Kp_t_{Vector2d::Zero()};
+  // translational derivative gains (kd_y, kd_z).
+  Vector2d QP_Kd_t_{Vector2d::Zero()};
+  // translational integral gains (ki_y, ki_z).
+  Vector2d QP_Ki_t_{Vector2d::Zero()};
+
+  // rotation integral saturation limit.
+  double QP_ki_r_sat_{0};
+  // translation integral saturation limit (ki_y_sat, ki_z_sat).
+  Vector2d QP_Ki_t_sat_{Vector2d::Zero()};
+
   double QP_weight_thetaddot_error_{0};  // thetaddot error weight.
   double QP_weight_acceleration_error_{0};  // tran. acceleration error weight.
   double QP_weight_f_Cb_B_{0};  // contact force magnitude penalty weight.

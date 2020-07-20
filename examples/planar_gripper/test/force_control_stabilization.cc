@@ -96,21 +96,21 @@ DEFINE_string(brick_type, "planar",
 DEFINE_string(keyframes_filename, "planar_brick_multi_mode.txt",
               "The name of the file containing the keyframes.");
 DEFINE_double(QP_plan_dt, 0.002, "The QP planner's timestep.");
-DEFINE_double(QP_Kp_t, 350, "QP controller translational Kp gain.");
-DEFINE_double(QP_Kd_t, 100, "QP controller translational Kd gain.");
-DEFINE_double(QP_Ki_t, 500, "QP controller translational Ki gain.");
-DEFINE_double(QP_Ki_r, 19e3, "QP controller rotational Ki gain.");
-DEFINE_double(QP_Ki_r_sat, 0.004, "QP integral rotational saturation value.");
-DEFINE_double(QP_Ki_t_sat, 0.05,
+DEFINE_double(QP_kp_t, 350, "QP controller translational proportional gain.");
+DEFINE_double(QP_kd_t, 100, "QP controller translational derivative gain.");
+DEFINE_double(QP_ki_t, 500, "QP controller translational integral gain.");
+DEFINE_double(QP_ki_r, 19e3, "QP controller rotational integral gain.");
+DEFINE_double(QP_ki_r_sat, 0.004, "QP integral rotational saturation value.");
+DEFINE_double(QP_ki_t_sat, 0.05,
               "QP integral translational saturation value.");
-DEFINE_double(QP_Kp_r_pinned, 2e3,
-              "QP controller rotational Kp gain for pinned brick.");
-DEFINE_double(QP_Kd_r_pinned, 10,
-              "QP controller rotational Kd gain for pinned brick.");
-DEFINE_double(QP_Kp_r_planar, 195,
-              "QP controller rotational Kp gain for planar brick.");
-DEFINE_double(QP_Kd_r_planar, 120,
-              "QP controller rotational Kd gain for planar brick.");
+DEFINE_double(QP_kp_r_pinned, 2e3,
+              "QP controller rotational proportional gain for pinned brick.");
+DEFINE_double(QP_kd_r_pinned, 10,
+              "QP controller rotational derivative gain for pinned brick.");
+DEFINE_double(QP_kp_r_planar, 195,
+              "QP controller rotational proportional gain for planar brick.");
+DEFINE_double(QP_kd_r_planar, 120,
+              "QP controller rotational derivative gain for planar brick.");
 DEFINE_double(QP_weight_thetaddot_error, 1, "thetaddot error weight.");
 DEFINE_double(QP_weight_a_error, 1, "translational acceleration error weight.");
 DEFINE_double(QP_weight_f_Cb_B, 500, "Contact force magnitude penalty weight");
@@ -125,29 +125,6 @@ DEFINE_bool(print_keyframes, false,
 
 DEFINE_double(time_scale_factor, 0.7, "time scale factor.");
 DEFINE_bool(add_floor, true, "Adds a floor to the simulation");
-
-// For this demo, we switch from position control to torque control after a
-// certain time has elapsed (given by the flag switch_time). This should occur
-// right after contact is initiated with all three fingers.
-// This system has a single output port that contains the control type to use
-// based on the current context time.
-class TimedControlType final : public systems::LeafSystem<double> {
- public:
-  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(TimedControlType);
-
-  TimedControlType() {
-    this->DeclareAbstractOutputPort("control_type",
-                                    &TimedControlType::SetOutput);
-  }
-  void SetOutput(const systems::Context<double>& context,
-                 ControlType* control_type) const {
-    if (context.get_time() > FLAGS_switch_time) {
-      *control_type = ControlType::kTorque;
-    } else {
-      *control_type = ControlType::kPosition;
-    }
-  }
-};
 
 // This system generates three outputs (one for each finger) indicating whether
 // it is in position or force control mode. The system is constructed using
@@ -302,21 +279,22 @@ void GetQPPlannerOptions(const PlanarGripper& planar_gripper,
   qpoptions->control_task_ = (FLAGS_is_regulation_task)
                                  ? ControlTask::kRegulation
                                  : ControlTask::kTracking;
-  qpoptions->QP_Kp_r_ =
-      (brick_type == BrickType::PinBrick ? FLAGS_QP_Kp_r_pinned
-                                         : FLAGS_QP_Kp_r_planar);
-  qpoptions->QP_Kd_r_ =
-      (brick_type == BrickType::PinBrick ? FLAGS_QP_Kd_r_pinned
-                                         : FLAGS_QP_Kd_r_planar);
-  qpoptions->QP_Ki_r_ = FLAGS_QP_Ki_r;
+  qpoptions->QP_kp_r_ =
+      (brick_type == BrickType::PinBrick ? FLAGS_QP_kp_r_pinned
+                                         : FLAGS_QP_kp_r_planar);
+  qpoptions->QP_kd_r_ =
+      (brick_type == BrickType::PinBrick ? FLAGS_QP_kd_r_pinned
+                                         : FLAGS_QP_kd_r_planar);
+  qpoptions->QP_ki_r_ = FLAGS_QP_ki_r;
   qpoptions->QP_Kp_t_ =
-      Eigen::Vector2d(FLAGS_QP_Kp_t, FLAGS_QP_Kp_t).asDiagonal();
+      Eigen::Vector2d(FLAGS_QP_kp_t, FLAGS_QP_kp_t);
   qpoptions->QP_Kd_t_ =
-      Eigen::Vector2d(FLAGS_QP_Kd_t, FLAGS_QP_Kd_t).asDiagonal();
+      Eigen::Vector2d(FLAGS_QP_kd_t, FLAGS_QP_kd_t);
   qpoptions->QP_Ki_t_ =
-      Eigen::Vector2d(FLAGS_QP_Ki_t, FLAGS_QP_Ki_t).asDiagonal();
-  qpoptions->QP_Ki_r_sat_ = FLAGS_QP_Ki_r_sat;
-  qpoptions->QP_Ki_t_sat_ = FLAGS_QP_Ki_t_sat;
+      Eigen::Vector2d(FLAGS_QP_ki_t, FLAGS_QP_ki_t);
+  qpoptions->QP_ki_r_sat_ = FLAGS_QP_ki_r_sat;
+  qpoptions->QP_Ki_t_sat_(0) = FLAGS_QP_ki_t_sat;  // y-saturation.
+  qpoptions->QP_Ki_t_sat_(1) = FLAGS_QP_ki_t_sat;  // z-saturation.
   qpoptions->QP_weight_thetaddot_error_ = FLAGS_QP_weight_thetaddot_error;
   qpoptions->QP_weight_acceleration_error_ = FLAGS_QP_weight_a_error;
   qpoptions->QP_weight_f_Cb_B_ = FLAGS_QP_weight_f_Cb_B;
@@ -474,7 +452,6 @@ int DoMain() {
   auto control_type_src = builder.AddSystem<KeyframeControlType>(times, modes);
 
   // Add and connect the control_type source system.
-//  auto control_type_src = builder.AddSystem<TimedControlType>();
   DRAKE_DEMAND(finger_force_control_map.size() == kNumFingers);
   for (auto iter = finger_force_control_map.begin();
        iter != finger_force_control_map.end(); ++iter) {

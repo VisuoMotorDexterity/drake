@@ -124,20 +124,20 @@ DEFINE_double(QP_plan_dt, 0.002, "The QP planner's timestep.");
 
 DEFINE_string(use_QP, "local",
               "We provide 3 types of QP controller, LCM, UDP or local.");
-DEFINE_double(QP_Kp_t, 350, "QP controller translational Kp gain.");
-DEFINE_double(QP_Kd_t, 100, "QP controller translational Kd gain.");
-DEFINE_double(QP_Ki_t, 0, "QP controller translational Ki gain.");
-DEFINE_double(QP_Ki_r, 0, "QP controller rotational Ki gain.");
-DEFINE_double(QP_Ki_r_sat, 0, "QP integral saturation value.");
-DEFINE_double(QP_Ki_t_sat, 0, "QP integral translational saturation value.");
-DEFINE_double(QP_Kp_r_pinned, 150,
-              "QP controller rotational Kp gain for pinned brick.");
-DEFINE_double(QP_Kd_r_pinned, 50,
-              "QP controller rotational Kd gain for pinned brick.");
-DEFINE_double(QP_Kp_r_planar, 195,
-              "QP controller rotational Kp gain for planar brick.");
-DEFINE_double(QP_Kd_r_planar, 120,
-              "QP controller rotational Kd gain for planar brick.");
+DEFINE_double(QP_kp_t, 350, "QP controller translational proportional gain.");
+DEFINE_double(QP_kd_t, 100, "QP controller translational derivative gain.");
+DEFINE_double(QP_ki_t, 0, "QP controller translational integral gain.");
+DEFINE_double(QP_ki_r, 0, "QP controller rotational integral gain.");
+DEFINE_double(QP_ki_r_sat, 0, "QP integral saturation value.");
+DEFINE_double(QP_ki_t_sat, 0, "QP integral translational saturation value.");
+DEFINE_double(QP_kp_r_pinned, 150,
+              "QP controller rotational proportional gain for pinned brick.");
+DEFINE_double(QP_kd_r_pinned, 50,
+              "QP controller rotational derivative gain for pinned brick.");
+DEFINE_double(QP_kp_r_planar, 195,
+              "QP controller rotational proportional gain for planar brick.");
+DEFINE_double(QP_kd_r_planar, 120,
+              "QP controller rotational derivative gain for planar brick.");
 DEFINE_double(QP_weight_thetaddot_error, 1, "thetaddot error weight.");
 DEFINE_double(QP_weight_a_error, 1, "translational acceleration error weight.");
 DEFINE_double(QP_weight_f_Cb_B, 1, "Contact force magnitude penalty weight");
@@ -229,21 +229,22 @@ void GetQPPlannerOptions(const PlanarGripper& planar_gripper,
   qpoptions->control_task_ = (FLAGS_is_regulation_task)
                              ? ControlTask::kRegulation
                              : ControlTask::kTracking;
-  qpoptions->QP_Kp_r_ =
-      (brick_type == BrickType::PinBrick ? FLAGS_QP_Kp_r_pinned
-                                         : FLAGS_QP_Kp_r_planar);
-  qpoptions->QP_Kd_r_ =
-      (brick_type == BrickType::PinBrick ? FLAGS_QP_Kd_r_pinned
-                                         : FLAGS_QP_Kd_r_planar);
-  qpoptions->QP_Ki_r_ = FLAGS_QP_Ki_r;
+  qpoptions->QP_kp_r_ =
+      (brick_type == BrickType::PinBrick ? FLAGS_QP_kp_r_pinned
+                                         : FLAGS_QP_kp_r_planar);
+  qpoptions->QP_kd_r_ =
+      (brick_type == BrickType::PinBrick ? FLAGS_QP_kd_r_pinned
+                                         : FLAGS_QP_kd_r_planar);
+  qpoptions->QP_ki_r_ = FLAGS_QP_ki_r;
   qpoptions->QP_Kp_t_ =
-      Eigen::Vector2d(FLAGS_QP_Kp_t, FLAGS_QP_Kp_t).asDiagonal();
+      Eigen::Vector2d(FLAGS_QP_kp_t, FLAGS_QP_kp_t);
   qpoptions->QP_Kd_t_ =
-      Eigen::Vector2d(FLAGS_QP_Kd_t, FLAGS_QP_Kd_t).asDiagonal();
+      Eigen::Vector2d(FLAGS_QP_kd_t, FLAGS_QP_kd_t);
   qpoptions->QP_Ki_t_ =
-      Eigen::Vector2d(FLAGS_QP_Ki_t, FLAGS_QP_Ki_t).asDiagonal();
-  qpoptions->QP_Ki_r_sat_ = FLAGS_QP_Ki_r_sat;
-  qpoptions->QP_Ki_t_sat_ = FLAGS_QP_Ki_t_sat;
+      Eigen::Vector2d(FLAGS_QP_ki_t, FLAGS_QP_ki_t);
+  qpoptions->QP_ki_r_sat_ = FLAGS_QP_ki_r_sat;
+  qpoptions->QP_Ki_t_sat_(0) = FLAGS_QP_ki_t_sat;  // y-saturation.
+  qpoptions->QP_Ki_t_sat_(1) = FLAGS_QP_ki_t_sat;  // z-saturation.
   qpoptions->QP_weight_thetaddot_error_ = FLAGS_QP_weight_thetaddot_error;
   qpoptions->QP_weight_acceleration_error_ = FLAGS_QP_weight_a_error;
   qpoptions->QP_weight_f_Cb_B_ = FLAGS_QP_weight_f_Cb_B;
