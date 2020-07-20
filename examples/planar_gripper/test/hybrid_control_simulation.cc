@@ -88,16 +88,16 @@ DEFINE_double(T, 1.5, "time horizon (s)");
 DEFINE_string(brick_type, "pinned",
               "Defines the brick type: {pinned, planar}.");
 DEFINE_double(QP_plan_dt, 0.002, "The QP planner's timestep.");
-DEFINE_double(QP_Kp_t, 350, "QP controller translational Kp gain.");
-DEFINE_double(QP_Kd_t, 100, "QP controller translational Kd gain.");
-DEFINE_double(QP_Kp_r_pinned, 150,
-              "QP controller rotational Kp gain for pinned brick.");
-DEFINE_double(QP_Kd_r_pinned, 50,
-              "QP controller rotational Kd gain for pinned brick.");
-DEFINE_double(QP_Kp_r_planar, 195,
-              "QP controller rotational Kp gain for planar brick.");
-DEFINE_double(QP_Kd_r_planar, 120,
-              "QP controller rotational Kd gain for planar brick.");
+DEFINE_double(QP_kp_t, 350, "QP controller translational proportional gain.");
+DEFINE_double(QP_kd_t, 100, "QP controller translational derivative gain.");
+DEFINE_double(QP_kp_r_pinned, 150,
+              "QP controller rotational proportional gain for pinned brick.");
+DEFINE_double(QP_kd_r_pinned, 50,
+              "QP controller rotational derivative gain for pinned brick.");
+DEFINE_double(QP_kp_r_planar, 195,
+              "QP controller rotational proportional gain for planar brick.");
+DEFINE_double(QP_kd_r_planar, 120,
+              "QP controller rotational derivative gain for planar brick.");
 DEFINE_double(QP_weight_thetaddot_error, 1, "thetaddot error weight.");
 DEFINE_double(QP_weight_a_error, 1, "translational acceleration error weight.");
 DEFINE_double(QP_weight_f_Cb_B, 1, "Contact force magnitude penalty weight");
@@ -164,16 +164,16 @@ void GetQPPlannerOptions(const PlanarGripper& planar_gripper,
   qpoptions->brick_goal_.y_goal = FLAGS_yf;
   qpoptions->brick_goal_.z_goal = FLAGS_zf;
   qpoptions->brick_goal_.theta_goal = FLAGS_thetaf;
-  qpoptions->QP_Kp_r_ =
-      (brick_type == BrickType::PinBrick ? FLAGS_QP_Kp_r_pinned
-                                         : FLAGS_QP_Kp_r_planar);
-  qpoptions->QP_Kd_r_ =
-      (brick_type == BrickType::PinBrick ? FLAGS_QP_Kd_r_pinned
-                                         : FLAGS_QP_Kd_r_planar);
+  qpoptions->QP_kp_r_ =
+      (brick_type == BrickType::PinBrick ? FLAGS_QP_kp_r_pinned
+                                         : FLAGS_QP_kp_r_planar);
+  qpoptions->QP_kd_r_ =
+      (brick_type == BrickType::PinBrick ? FLAGS_QP_kd_r_pinned
+                                         : FLAGS_QP_kd_r_planar);
   qpoptions->QP_Kp_t_ =
-      Eigen::Vector2d(FLAGS_QP_Kp_t, FLAGS_QP_Kp_t).asDiagonal();
+      Eigen::Vector2d(FLAGS_QP_kp_t, FLAGS_QP_kp_t);
   qpoptions->QP_Kd_t_ =
-      Eigen::Vector2d(FLAGS_QP_Kd_t, FLAGS_QP_Kd_t).asDiagonal();
+      Eigen::Vector2d(FLAGS_QP_kd_t, FLAGS_QP_kd_t);
   qpoptions->QP_weight_thetaddot_error_ = FLAGS_QP_weight_thetaddot_error;
   qpoptions->QP_weight_acceleration_error_ = FLAGS_QP_weight_a_error;
   qpoptions->QP_weight_f_Cb_B_ = FLAGS_QP_weight_f_Cb_B;
