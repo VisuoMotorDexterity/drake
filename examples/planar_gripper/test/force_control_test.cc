@@ -26,6 +26,8 @@ using multibody::ContactResults;
 using multibody::MultibodyPlant;
 using multibody::SpatialForce;
 
+// TODO(rcory) Break out common code into a test fixture.
+
 /// This is a ForceController integration test. The plant consists of a single
 /// planar finger and a fixed brick, and the test checks the ForceController's
 /// ability to regulate a fixed force against the surface of the brick.
@@ -133,9 +135,13 @@ GTEST_TEST(ForceControllerTest, PlanarFingerStaticForceControl) {
       Eigen::Vector3d::Zero() /* torque */,
       Eigen::Vector3d(0 /* fx_*/, -0.032 /* fy */, -0.065 /* fz*/));
 
-  // Draw the desired force in drake viz.
+  // Draw the desired force in drake visualizer. I (rcory) determined the origin
+  // of this force vector (p_BoBq_W) experimentally, by rolling out the
+  // simulation and analyzing the contact point location after settling. Note:
+  // since this test does not control contact position, it can lie anywhere on
+  // the brick's surface.
   std::vector<multibody::SpatialForceOutput<double>> force_viz_vec;
-  Vector3d p_BoBq_W(0, -0.05202649, 0.017351387);
+  Vector3d p_BoBq_W(0, -0.015819, 0.049337);
   force_viz_vec.emplace_back(p_BoBq_W, desired_force.F_Bq_W);
   auto force_viz_src = builder.AddSystem<systems::ConstantValueSource<double>>(
       Value<std::vector<multibody::SpatialForceOutput<double>>>(
@@ -317,7 +323,11 @@ GTEST_TEST(ForceControllerTest, PlanarFingerStaticForceControl2) {
       Eigen::Vector3d::Zero() /* torque */,
       Eigen::Vector3d(0 /* fx_*/, 0.183284 /* fy */, 0.1198 /* fz*/));
 
-  // Draw the desired force in drake viz.
+  // Draw the desired force in drake visualizer. I (rcory) determined the origin
+  // of this force vector (p_BoBq_W) experimentally, by rolling out the
+  // simulation and analyzing the contact point location after settling. Note:
+  // since this test does not control contact position, it can lie anywhere on
+  // the brick's surface.
   std::vector<multibody::SpatialForceOutput<double>> force_viz_vec;
   Vector3d p_BoBq_W(0, -0.05202649, 0.017351387);
   force_viz_vec.emplace_back(p_BoBq_W, desired_force.F_Bq_W);
