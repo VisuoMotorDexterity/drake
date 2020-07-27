@@ -79,6 +79,8 @@
 #include "drake/systems/lcm/lcm_interface_system.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
 #include "drake/systems/lcm/lcm_subscriber_system.h"
+#include "drake/systems/sensors/image_to_lcm_image_array_t.h"
+#include "drake/systems/sensors/pixel_types.h"
 
 namespace drake {
 namespace examples {
@@ -114,7 +116,8 @@ DEFINE_string(orientation, "vertical",
               "horizontal}.");
 DEFINE_bool(visualize_contacts, true,
             "Visualize contacts in Drake visualizer.");
-DEFINE_string(brick_type, "planar", "The brick type {pinned, planar}");
+DEFINE_string(brick_type, "planar",
+              "The brick type {pinned, planar, textured_planar}");
 DEFINE_bool(
     use_position_control, true,
     "If true (default) we simulate position control via inverse dynamics "
@@ -144,6 +147,8 @@ int DoMain() {
     planar_gripper->SetupPinBrick(FLAGS_orientation);
   } else if (FLAGS_brick_type == "planar") {
     planar_gripper->SetupPlanarBrick(FLAGS_orientation);
+  } else if (FLAGS_brick_type == "textured_planar") {
+    planar_gripper->SetupPlanarBrickWithTexture(FLAGS_orientation);
   } else {
     throw std::runtime_error("Unknown BrickType.");
   }
@@ -200,10 +205,9 @@ int DoMain() {
   builder.Connect(planar_gripper->GetOutputPort("plant_state"),
                   frame_viz->get_input_port(0));
 
-  geometry::ConnectDrakeVisualizer(&builder,
-                                   planar_gripper->get_mutable_scene_graph(),
-                                   planar_gripper->GetOutputPort("pose_bundle"),
-                                   lcm, geometry::Role::kIllustration);
+  geometry::ConnectDrakeVisualizer(
+      &builder, planar_gripper->get_mutable_scene_graph(),
+      planar_gripper->GetOutputPort("pose_bundle"));
 
   // Publish contact results for visualization.
   if (FLAGS_visualize_contacts) {
@@ -211,6 +215,33 @@ int DoMain() {
         &builder, planar_gripper->get_mutable_multibody_plant(),
         planar_gripper->GetOutputPort("contact_results"));
   }
+
+  // Publish the camera image (both rgb and depth) for visualization.
+  auto image_to_lcm_image_array =
+      builder.AddSystem<drake::systems::sensors::ImageToLcmImageArrayT>();
+  image_to_lcm_image_array->set_name("camera_viewer");
+
+  const std::string& camera_name = planar_gripper->get_default_camera_name();
+  const auto& color_cam_port =
+      image_to_lcm_image_array
+          ->DeclareImageInputPort<drake::systems::sensors::PixelType::kRgba8U>(
+              "color_camera_" + camera_name);
+  builder.Connect(planar_gripper->GetOutputPort(camera_name + "_rgb_image"),
+                  color_cam_port);
+
+  const auto& depth_cam_port = image_to_lcm_image_array->DeclareImageInputPort<
+      drake::systems::sensors::PixelType::kDepth16U>("depth_camera_" +
+                                                     camera_name);
+  builder.Connect(planar_gripper->GetOutputPort(camera_name + "_depth_image"),
+                  depth_cam_port);
+
+  constexpr double kCameraImagePublishRate = 0.1;  // [s]
+  auto image_array_lcm_publisher =
+      builder.template AddSystem(drake::systems::lcm::LcmPublisherSystem::Make<
+                                 robotlocomotion ::image_array_t>(
+          "DRAKE_RGBD_CAMERA_IMAGES", nullptr, kCameraImagePublishRate));
+  builder.Connect(image_to_lcm_image_array->image_array_t_msg_output_port(),
+                  image_array_lcm_publisher->get_input_port());
 
   // Publish planar gripper status via LCM.
   auto status_pub = builder.AddSystem(
@@ -304,7 +335,7 @@ int DoMain() {
   const int rx_index = brick_keyframe_info.second["brick_revolute_x_joint"];
   init_brick_pos_map["brick_revolute_x_joint"] =
       brick_keyframe_info.first(rx_index, 0);
-  if (FLAGS_brick_type == "planar") {
+  if (FLAGS_brick_type == "planar" || FLAGS_brick_type == "textured_planar") {
     const int ty_index = brick_keyframe_info.second["brick_translate_y_joint"];
     const int tz_index = brick_keyframe_info.second["brick_translate_z_joint"];
     init_brick_pos_map["brick_translate_y_joint"] =

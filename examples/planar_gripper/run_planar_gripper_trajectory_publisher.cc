@@ -55,6 +55,7 @@ int DoMain() {
   const std::string full_name = FindResourceOrThrow(
       "drake/examples/planar_gripper/models/planar_gripper.sdf");
   MultibodyPlant<double> plant(1e-3 /* to suppress continuous time warnings */);
+
   multibody::Parser(&plant).AddModelFromFile(full_name);
   WeldGripperFrames<double>(&plant);
 
